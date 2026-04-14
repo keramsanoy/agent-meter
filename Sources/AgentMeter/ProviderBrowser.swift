@@ -23,7 +23,7 @@ final class ProviderBrowser: NSObject, WKNavigationDelegate {
 
     func fetchUsage() async throws -> UsageSnapshot {
         shouldFocusAfterNavigation = false
-        attachBackgroundHost()
+        attachBackgroundHostIfNeeded()
         try await load(url: provider.usageURL)
         try await Task.sleep(nanoseconds: 2_000_000_000)
         let text = try await pageText()
@@ -121,18 +121,21 @@ final class ProviderBrowser: NSObject, WKNavigationDelegate {
         return window
     }
 
-    private func attachBackgroundHost() {
+
+    private func attachBackgroundHostIfNeeded() {
+        guard browserWindow?.isVisible != true else { return }
         if backgroundWindow == nil {
             let viewController = BrowserViewController(webView: webView, showsToolbar: false)
             let window = NSWindow(contentViewController: viewController)
             window.title = "\(provider.displayName) Background Browser"
-            window.setFrame(NSRect(x: -10_000, y: -10_000, width: 1024, height: 768), display: false)
+            window.setFrame(NSRect(x: 0, y: 0, width: 1024, height: 768), display: false)
             window.styleMask = [.borderless]
+            window.collectionBehavior = [.transient, .ignoresCycle, .canJoinAllSpaces]
+            window.isExcludedFromWindowsMenu = true
             window.isReleasedWhenClosed = false
-            window.alphaValue = 0.01
             backgroundWindow = window
         }
-        if browserWindow?.isVisible != true { backgroundWindow?.orderBack(nil) }
+        _ = backgroundWindow?.contentViewController?.view
     }
 
     private func attachWebView(to viewController: BrowserViewController?) { viewController?.attachBrowserView() }
